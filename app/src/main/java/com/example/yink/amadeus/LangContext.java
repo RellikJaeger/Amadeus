@@ -13,11 +13,11 @@ import android.preference.PreferenceManager;
 import java.util.Locale;
 
 public class LangContext extends ContextWrapper {
+
     public LangContext(Context base) {
         super(base);
     }
 
-    @SuppressWarnings("deprecation")
     public static ContextWrapper wrap(Context context) {
         Configuration config = context.getResources().getConfiguration();
 
@@ -26,12 +26,12 @@ public class LangContext extends ContextWrapper {
         String lang = settings.getString("lang", "en");
         String[] langArr = lang.split("-");
         Locale locale;
-        switch(langArr.length){
+        switch (langArr.length) {
             case 3:
-                locale = new Locale(langArr[0],langArr[1], langArr[2]);
+                locale = new Locale(langArr[0], langArr[1], langArr[2]);
                 break;
             case 2:
-                locale = new Locale(langArr[0],langArr[1]);
+                locale = new Locale(langArr[0], langArr[1]);
                 break;
             default:
                 locale = new Locale(langArr[0]);
@@ -58,7 +58,6 @@ public class LangContext extends ContextWrapper {
         return new LangContext(context);
     }
 
-    @SuppressWarnings("deprecation")
     public static Context load(Context context, String lang) {
         Configuration config = context.getResources().getConfiguration();
 
@@ -80,13 +79,12 @@ public class LangContext extends ContextWrapper {
         return context;
     }
 
-    @SuppressWarnings("deprecation")
-    private static void setSystemLocaleLegacy(Configuration config, Locale locale){
+    private static void setSystemLocaleLegacy(Configuration config, Locale locale) {
         config.locale = locale;
     }
 
     @TargetApi(Build.VERSION_CODES.N)
-    private static void setSystemLocale(Configuration config, Locale locale){
+    private static void setSystemLocale(Configuration config, Locale locale) {
         config.setLocale(locale);
     }
 }

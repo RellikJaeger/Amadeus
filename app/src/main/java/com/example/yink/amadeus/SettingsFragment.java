@@ -1,22 +1,16 @@
 package com.example.yink.amadeus;
 
-import android.content.SharedPreferences;
-import android.os.Build;
 import android.os.Bundle;
-import android.preference.PreferenceFragment;
-import android.support.annotation.RequiresApi;
+
+import androidx.preference.PreferenceFragmentCompat;
 
 /**
  * Created by Yink on 05.03.2017.
  */
-
-@RequiresApi(api = Build.VERSION_CODES.HONEYCOMB)
-public class SettingsFragment extends PreferenceFragment {
-    SharedPreferences sharedPreferences;
+public class SettingsFragment extends PreferenceFragmentCompat {
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        addPreferencesFromResource(R.xml.preferences);
+    public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+        setPreferencesFromResource(R.xml.preferences, rootKey);
     }
 }

@@ -8,12 +8,13 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.TimePicker;
 import android.widget.Toast;
 import android.widget.ToggleButton;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.Calendar;
 
@@ -32,18 +33,14 @@ public class AlarmActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_alarm);
         settings = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        alarmTimePicker = (TimePicker) findViewById(R.id.alarmTimePicker);
-        alarmToggle = (ToggleButton) findViewById(R.id.alarmToggle);
+        alarmTimePicker = findViewById(R.id.alarmTimePicker);
+        alarmToggle = findViewById(R.id.alarmToggle);
         alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
         pendingIntent = PendingIntent.getBroadcast(this, Alarm.ALARM_ID, new Intent(this, AlarmReceiver.class), PendingIntent.FLAG_CANCEL_CURRENT);
 
         alarmTimePicker.setIs24HourView(settings.getBoolean("24-hour_format", true));
 
-        if (settings.getBoolean("alarm_toggle", false)) {
-            alarmToggle.setChecked(true);
-        } else {
-            alarmToggle.setChecked(false);
-        }
+        alarmToggle.setChecked(settings.getBoolean("alarm_toggle", false));
     }
 
     public void onToggleClicked(View view) {

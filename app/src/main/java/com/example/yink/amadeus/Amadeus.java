@@ -1,6 +1,5 @@
 package com.example.yink.amadeus;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -13,25 +12,29 @@ import android.media.MediaPlayer;
 import android.media.audiofx.Visualizer;
 import android.net.Uri;
 import android.preference.PreferenceManager;
-import android.support.annotation.NonNull;
 import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 
-class Amadeus {
+import static com.example.yink.amadeus.MainActivity.promptSpeechInput;
 
+class Amadeus {
+    private static final String TAG = Amadeus.class.getName();
+    private static final VoiceLine[] voiceLines = VoiceLine.Line.getLines();
+    private static final HashMap<Bundle<Integer>, Bundle<VoiceLine>> responseInputMap = new HashMap<>();
+    private static int shaman_girls = -1;
     static Boolean isSpeaking = false;
     static Boolean isLoop = false;
     static MediaPlayer m;
-    private static String TAG = "Amadeus";
-    private static int shaman_girls = -1;
-    private static VoiceLine[] voiceLines = VoiceLine.Line.getLines();
-    private static HashMap<Bundle<Integer>, Bundle<VoiceLine>> responseInputMap = new HashMap<>();
 
     static {
         responseInputMap.put(new Bundle<>(
@@ -118,7 +121,7 @@ class Amadeus {
         ));
     }
 
-    static void speak(VoiceLine line, final Activity activity) {
+    static void speak(VoiceLine line, final AppCompatActivity activity) {
         final AnimationDrawable animation;
         final TextView subtitles = (TextView) activity.findViewById(R.id.textView_subtitles);
         final ImageView kurisu = (ImageView) activity.findViewById(R.id.imageView_kurisu);
@@ -142,31 +145,20 @@ class Amadeus {
                 m = new MediaPlayer();
             }
 
-            m.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                @Override
-                public void onPrepared(MediaPlayer mp) {
-                    isSpeaking = true;
-                    mp.start();
-                    v.setEnabled(true);
-                }
+            m.setOnPreparedListener(mp -> {
+                isSpeaking = true;
+                mp.start();
+                v.setEnabled(true);
             });
 
-            m.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                @Override
-                public void onCompletion(MediaPlayer mp) {
-                    isSpeaking = false;
-                    mp.release();
-                    v.setEnabled(false);
+            m.setOnCompletionListener(mp -> {
+                isSpeaking = false;
+                mp.release();
+                v.setEnabled(false);
 
-                    activity.runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            kurisu.setImageDrawable(animation.getFrame(0));
-                        }
-                    });
-                }
+                activity.runOnUiThread(() -> kurisu.setImageDrawable(animation.getFrame(0)));
+                Log.e(TAG, "Kurisu stopped");
             });
-
 
             v.setEnabled(false);
             v.setCaptureSize(Visualizer.getCaptureSizeRange()[1]);
@@ -180,37 +172,39 @@ class Amadeus {
                             // The normalized volume
                             final float normalized = sum / (float) bytes.length;
 
-                            activity.runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    if (normalized > 50) {
-                                        // Todo: Maybe choose sprite based on previous choice and volume instead of random
-                                        kurisu.setImageDrawable(animation.getFrame((int) Math.ceil(Math.random() * 2)));
-                                    } else {
-                                        kurisu.setImageDrawable(animation.getFrame(0));
-                                    }
+                            activity.runOnUiThread(() -> {
+                                if (normalized > 50) {
+                                    // Todo: Maybe choose sprite based on previous choice and volume instead of random
+                                    kurisu.setImageDrawable(animation.getFrame((int) Math.ceil(Math.random() * 2)));
+                                    Log.e(TAG, "Kurisu speaking");
+                                } else {
+                                    kurisu.setImageDrawable(animation.getFrame(0));
+                                    Log.e(TAG, "Kurisu not speaking");
+                                    if (!Amadeus.isLoop && !Amadeus.isSpeaking) promptSpeechInput();
                                 }
                             });
                         }
-                        public void onFftDataCapture(Visualizer visualizer, byte[] bytes, int samplingRate) { }
+
+                        public void onFftDataCapture(Visualizer visualizer, byte[] bytes, int samplingRate) {
+                        }
                     }, Visualizer.getMaxCaptureRate() / 2, true, false);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    static void responseToInput(String input, Context context, Activity activity) {
+    static void responseToInput(String input, Context context, AppCompatActivity activity) {
         VoiceLine[] specificLines = null;
         input = input.toLowerCase();
 
-        if (containInput(input,context.getString(R.string.nullpo))) {
+        if (containInput(input, context.getString(R.string.nullpo))) {
             shaman_girls++;
-            if(shaman_girls<5){
+            if (shaman_girls < 5) {
                 specificLines = new VoiceLine[]{
                         voiceLines[VoiceLine.Line.GAH],
                         voiceLines[VoiceLine.Line.GAH_EXTENDED]
                 };
-            }else {
+            } else {
                 VoiceLine singleLine;
                 switch (shaman_girls) {
                     case 5:
@@ -237,7 +231,7 @@ class Amadeus {
             for (Bundle<Integer> input_bundle : responseInputMap.keySet()) {
                 for (Integer input_code : input_bundle) {
                     if (containInput(input, context.getString(input_code))) {
-                        specificLines = responseInputMap.get(input_bundle).toArray();
+                        specificLines = Objects.requireNonNull(responseInputMap.get(input_bundle)).toArray();
                         break;
                     }
                 }
@@ -255,24 +249,26 @@ class Amadeus {
             }
         }
         int intTarget = 0;
-        if(specificLines.length>1){intTarget = new Random().nextInt(specificLines.length);}
+        if (specificLines.length > 1) {
+            intTarget = new Random().nextInt(specificLines.length);
+        }
         Amadeus.speak(specificLines[intTarget], activity);
     }
 
-    private static boolean containInput(final String input, final String... strings){
-        for(String s:strings){
-            if(input.contains(s)) return true;
+    private static boolean containInput(final String input, final String... strings) {
+        for (String s : strings) {
+            if (input.contains(s)) return true;
         }
         return false;
     }
 
-    static void openApp(String[] input, Activity activity) {
+    static void openApp(String[] input, AppCompatActivity activity) {
         final PackageManager pm = activity.getPackageManager();
         List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_META_DATA);
 
         HashMap<String, Integer> dictionary = new HashMap<>();
         String corrected;
-        Boolean found;
+        boolean found;
         /* TODO: Dictionary for other language equivalents. To be reworked. */
         dictionary.put("хром", 0);
         dictionary.put("календарь", 1);
@@ -288,7 +284,7 @@ class Amadeus {
             /* TODO: Needs to be adjusted probably. */
             found = true;
             /* Look up words in dictionary and correct the input since we can't open some apps in other langs */
-            for (String word: input) {
+            for (String word : input) {
                 if (dictionary.get(word) != null) {
                     corrected = apps[dictionary.get(word)].toLowerCase();
                 } else {
@@ -301,7 +297,7 @@ class Amadeus {
             }
 
             if (found) {
-                Log.d(TAG, "Found app!");
+                Log.e(TAG, "Found app!");
                 Intent app;
                 Amadeus.speak(voiceLines[VoiceLine.Line.OK], activity);
                 switch (packageInfo.packageName) {
@@ -336,8 +332,9 @@ class Amadeus {
 
     private static class Bundle<T> implements Iterable<T> {
 
-        private T[] list;
+        private final T[] list;
 
+        @SafeVarargs
         public Bundle(T... list) {
             this.list = list;
         }
@@ -349,7 +346,7 @@ class Amadeus {
         @NonNull
         @Override
         public Iterator<T> iterator() {
-            Iterator<T> iterator = new Iterator<T>() {
+            return new Iterator<T>() {
                 int index = 0;
 
                 @Override
@@ -362,8 +359,6 @@ class Amadeus {
                     return list[index++];
                 }
             };
-            return iterator;
         }
     }
-
 }
