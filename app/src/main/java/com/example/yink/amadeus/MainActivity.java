@@ -137,7 +137,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        kurisu.setOnLongClickListener(view -> {
+        kurisu.setOnLongClickListener(v -> {
             if (!Amadeus.isLoop && !Amadeus.isSpeaking) {
                 handler.removeCallbacks(listeningRunnable);
                 logoSmall.setImageResource(R.drawable.amadeus_icon_smaller);
@@ -158,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
         });
         if (answerRunnable == null) answerRunnable = () ->
                 Amadeus.speak(voiceLines[VoiceLine.Line.HELLO], MainActivity.this);
-        handler.postDelayed(answerRunnable, 0);
+        handler.postDelayed(answerRunnable, 500);
     }
 
     @Override
