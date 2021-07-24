@@ -123,8 +123,8 @@ class Amadeus {
 
     static void speak(VoiceLine line, final AppCompatActivity activity) {
         final AnimationDrawable animation;
-        final TextView subtitles = (TextView) activity.findViewById(R.id.textView_subtitles);
-        final ImageView kurisu = (ImageView) activity.findViewById(R.id.imageView_kurisu);
+        final TextView subtitles = activity.findViewById(R.id.textView_subtitles);
+        final ImageView kurisu = activity.findViewById(R.id.imageView_kurisu);
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(activity);
 
         try {

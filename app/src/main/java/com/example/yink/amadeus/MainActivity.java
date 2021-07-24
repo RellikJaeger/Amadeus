@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -61,10 +62,22 @@ public class MainActivity extends AppCompatActivity {
         super.attachBaseContext(LangContext.wrap(newBase));
     }
 
+    public static void speechRecognizerBeepDisabled(Context context, boolean mute) {
+        AudioManager audioManager = (AudioManager) context.getSystemService(AUDIO_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            int flag = mute ? AudioManager.ADJUST_MUTE : AudioManager.ADJUST_UNMUTE;
+            audioManager.adjustStreamVolume(AudioManager.STREAM_SYSTEM, flag, 0);
+        } else {
+            audioManager.setStreamMute(AudioManager.STREAM_SYSTEM, mute);
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        speechRecognizerBeepDisabled(this, true);
 
         ImageView kurisu = findViewById(R.id.imageView_kurisu);
         subtitlesBackground = findViewById(R.id.imageView_subtitles);
@@ -179,6 +192,7 @@ public class MainActivity extends AppCompatActivity {
             if (listeningRunnable != null) handler.removeCallbacks(listeningRunnable);
             if (answerRunnable != null) handler.removeCallbacks(answerRunnable);
         }
+        speechRecognizerBeepDisabled(this, false);
     }
 
     @Override
@@ -252,17 +266,18 @@ public class MainActivity extends AppCompatActivity {
         }
 
         public void onError(int error) {
-//            speechRecognizer.cancel();
-//            Amadeus.speak(voiceLines[VoiceLine.Line.SORRY], MainActivity.this);
             if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
                 Log.e(TAG, "didn't recognize anything");
                 // keep going
                 if (!Amadeus.isLoop && !Amadeus.isSpeaking) promptSpeechInput();
             } else {
+                // drop voice input but it will automatically trigger again by Amadeus :3
                 if (error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
                     Log.e(TAG, "busy...");
                 } else {
                     Log.e(TAG, "error " + error);
+                    speechRecognizer.cancel();
+                    Amadeus.speak(voiceLines[VoiceLine.Line.SORRY], MainActivity.this);
                 }
                 if (handler != null && listeningRunnable != null)
                     handler.removeCallbacks(listeningRunnable);
