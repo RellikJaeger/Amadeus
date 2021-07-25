@@ -5,6 +5,8 @@ package com.example.yink.amadeus;
  */
 
 import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -30,31 +32,32 @@ import androidx.core.content.ContextCompat;
 import java.util.ArrayList;
 import java.util.Random;
 
+@SuppressLint("StaticFieldLeak")
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = MainActivity.class.getName();
     private static final int REQUEST_PERMISSION_RECORD_AUDIO = 11302;
     private static String recogLang;
     private static SpeechRecognizer speechRecognizer;
-    private final String TAG = MainActivity.class.getName();
     private final VoiceLine[] voiceLines = VoiceLine.Line.getLines();
     private String[] contextLang;
     private final Random randomGen = new Random();
     private Runnable loop, listeningRunnable, answerRunnable;
     private Handler handler;
     private ImageView settingsImg, logoSmall;
-    private int i = 34;
+    private static Context context;
     private SharedPreferences settings;
     private ImageView subtitlesBackground;
     private TextView subtitles;
     private int permissionCheck;
+    private int i = 36;
 
     public static void promptSpeechInput() {
-        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, recogLang);
-
-        speechRecognizer.startListening(intent);
+        speechRecognizerBeepDisabled(context, true);
+        speechRecognizer.startListening(new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                .putExtra(RecognizerIntent.EXTRA_LANGUAGE, recogLang));
     }
 
     @Override
@@ -65,8 +68,34 @@ public class MainActivity extends AppCompatActivity {
     public static void speechRecognizerBeepDisabled(Context context, boolean mute) {
         AudioManager audioManager = (AudioManager) context.getSystemService(AUDIO_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            int flag = mute ? AudioManager.ADJUST_MUTE : AudioManager.ADJUST_UNMUTE;
-            audioManager.adjustStreamVolume(AudioManager.STREAM_SYSTEM, flag, 0);
+            int dndMode = context.getSystemService(NotificationManager.class)
+                    .getCurrentInterruptionFilter();
+            switch (dndMode) {
+                default:
+                case NotificationManager.INTERRUPTION_FILTER_UNKNOWN:
+                    Log.e(TAG, "DND Mode Checking Result: FILTER_UNKNOWN");
+                    break;
+
+                case NotificationManager.INTERRUPTION_FILTER_ALL:
+                    Log.e(TAG, "DND Mode Checking Result: FILTER_ALL");
+                    int flag = mute ? AudioManager.ADJUST_MUTE : AudioManager.ADJUST_UNMUTE;
+                    audioManager.adjustStreamVolume(AudioManager.STREAM_SYSTEM, flag, 0);
+                    break;
+
+                case NotificationManager.INTERRUPTION_FILTER_PRIORITY:
+                    Log.e(TAG, "DND Mode Checking Result: FILTER_PRIORITY");
+                    break;
+
+                case NotificationManager.INTERRUPTION_FILTER_NONE:
+                    Log.e(TAG, "DND Mode Checking Result: FILTER_NONE");
+                    flag = mute ? AudioManager.ADJUST_MUTE : AudioManager.ADJUST_UNMUTE;
+                    audioManager.adjustStreamVolume(AudioManager.STREAM_SYSTEM, flag, 0);
+                    break;
+
+                case NotificationManager.INTERRUPTION_FILTER_ALARMS:
+                    Log.e(TAG, "DND Mode Checking Result: FILTER_ALARMS");
+                    break;
+            }
         } else {
             audioManager.setStreamMute(AudioManager.STREAM_SYSTEM, mute);
         }
@@ -76,8 +105,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        if (context == null) context = this.getApplicationContext();
 
-        speechRecognizerBeepDisabled(this, true);
+        speechRecognizerBeepDisabled(context, true);
 
         ImageView kurisu = findViewById(R.id.imageView_kurisu);
         subtitlesBackground = findViewById(R.id.imageView_subtitles);
@@ -90,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
         listeningRunnable = () -> {
             int DURATION = 100;
             i++;
-            if (i > 39) i = 35;
+            if (i > 39) i = 37;
             String imgName = "logo" + i;
             int id = getResources().getIdentifier(imgName, "drawable", getPackageName());
             logoSmall.setImageDrawable((ContextCompat.getDrawable(this, id)));
@@ -192,7 +222,8 @@ public class MainActivity extends AppCompatActivity {
             if (listeningRunnable != null) handler.removeCallbacks(listeningRunnable);
             if (answerRunnable != null) handler.removeCallbacks(answerRunnable);
         }
-        speechRecognizerBeepDisabled(this, false);
+        speechRecognizerBeepDisabled(context, false);
+        context = null;
     }
 
     @Override
