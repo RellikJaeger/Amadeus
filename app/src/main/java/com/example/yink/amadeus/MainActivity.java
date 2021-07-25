@@ -68,22 +68,27 @@ public class MainActivity extends AppCompatActivity {
     public static void speechRecognizerBeepDisabled(Context context, boolean mute) {
         AudioManager audioManager = (AudioManager) context.getSystemService(AUDIO_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            int dndMode = context.getSystemService(NotificationManager.class)
-                    .getCurrentInterruptionFilter();
+            NotificationManager notiManager = context.getSystemService(NotificationManager.class);
+            int dndMode = notiManager.getCurrentInterruptionFilter();
             switch (dndMode) {
                 default:
                 case NotificationManager.INTERRUPTION_FILTER_UNKNOWN:
                     Log.e(TAG, "DND Mode Checking Result: FILTER_UNKNOWN");
+                    int flag = mute ? AudioManager.ADJUST_MUTE : AudioManager.ADJUST_UNMUTE;
+                    audioManager.adjustStreamVolume(AudioManager.STREAM_SYSTEM, flag, 0);
                     break;
 
                 case NotificationManager.INTERRUPTION_FILTER_ALL:
                     Log.e(TAG, "DND Mode Checking Result: FILTER_ALL");
-                    int flag = mute ? AudioManager.ADJUST_MUTE : AudioManager.ADJUST_UNMUTE;
+                    flag = mute ? AudioManager.ADJUST_MUTE : AudioManager.ADJUST_UNMUTE;
                     audioManager.adjustStreamVolume(AudioManager.STREAM_SYSTEM, flag, 0);
                     break;
 
                 case NotificationManager.INTERRUPTION_FILTER_PRIORITY:
                     Log.e(TAG, "DND Mode Checking Result: FILTER_PRIORITY");
+                    notiManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL);
+                    flag = mute ? AudioManager.ADJUST_MUTE : AudioManager.ADJUST_UNMUTE;
+                    audioManager.adjustStreamVolume(AudioManager.STREAM_SYSTEM, flag, 0);
                     break;
 
                 case NotificationManager.INTERRUPTION_FILTER_NONE:
@@ -94,6 +99,8 @@ public class MainActivity extends AppCompatActivity {
 
                 case NotificationManager.INTERRUPTION_FILTER_ALARMS:
                     Log.e(TAG, "DND Mode Checking Result: FILTER_ALARMS");
+                    flag = mute ? AudioManager.ADJUST_MUTE : AudioManager.ADJUST_UNMUTE;
+                    audioManager.adjustStreamVolume(AudioManager.STREAM_SYSTEM, flag, 0);
                     break;
             }
         } else {
@@ -106,6 +113,12 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         if (context == null) context = this.getApplicationContext();
+        if (!dndAccessAllowed()) {
+            startActivity(new Intent(this, LaunchActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                            | Intent.FLAG_ACTIVITY_CLEAR_TASK));
+            finish();
+        }
 
         speechRecognizerBeepDisabled(context, true);
 
@@ -229,12 +242,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (!settings.getBoolean("show_subtitles", false)) {
-            subtitlesBackground.setVisibility(View.INVISIBLE);
-            subtitles.setVisibility(View.INVISIBLE);
-        } else {
-            subtitlesBackground.setVisibility(View.VISIBLE);
-            subtitles.setVisibility(View.VISIBLE);
+        if (dndAccessAllowed()) {
+            if (!settings.getBoolean("show_subtitles", false)) {
+                subtitlesBackground.setVisibility(View.INVISIBLE);
+                subtitles.setVisibility(View.INVISIBLE);
+            } else {
+                subtitlesBackground.setVisibility(View.VISIBLE);
+                subtitles.setVisibility(View.VISIBLE);
+            }
         }
     }
 
@@ -242,7 +257,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         Amadeus.isLoop = false;
+    }
 
+    private boolean dndAccessAllowed() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            NotificationManager notiManager = this.getSystemService(NotificationManager.class);
+            return notiManager.isNotificationPolicyAccessGranted();
+        }
+        return true;
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.example.yink.amadeus;
 
+import android.app.AlertDialog;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -87,8 +88,28 @@ public class LaunchActivity extends AppCompatActivity {
         }
 
         connect.setOnClickListener(v -> {
-            if (!isPressed && isAppInstalled(LaunchActivity.this, "com.google.android.googlequicksearchbox")) {
+            if (!isPressed && isAppInstalled(LaunchActivity.this,
+                    "com.google.android.googlequicksearchbox")) {
                 isPressed = true;
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    NotificationManager notiManager = this.getSystemService(NotificationManager.class);
+                    if (!notiManager.isNotificationPolicyAccessGranted()) {
+                        new AlertDialog.Builder(this)
+                                .setTitle("Amadeus System Message")
+                                .setMessage("Hello! I'm Amadeus System AI.\nIt seems like you need to " +
+                                        "allow \"Do Not Disturb access\" policy to connect with " +
+                                        "Kurisu-san.")
+                                .setPositiveButton("OK", (dialog, which) -> {
+                                    startActivity(new Intent(android.provider.Settings
+                                            .ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS));
+                                })
+                                .setNegativeButton("Cancel", (dialog, which) -> dialog.cancel())
+                                .show();
+                        isPressed = false;
+                        return;
+                    }
+                }
 
                 connect.setImageResource(R.drawable.connect_select);
 
